@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Block 1">
+<title>Brett — Block 1 Tracker</title>
+<style>
+  :root{
+    --bg:#151312;
+    --bg-raised:#1D1A18;
+    --bg-input:#0F0D0C;
+    --line:#2C2824;
+    --text:#EDEAE4;
+    --text-dim:#9B948C;
+    --text-faint:#6B6660;
+    --accent:#5B8DBE;
+    --accent-dim:#3A5A78;
+    --deload:#C97A3D;
+    --deload-dim:#8A5429;
+    --done:#6FA37A;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:none;
+  }
+  #app{
+    max-width:600px; margin:0 auto;
+    padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 40px);
+    min-height:100vh;
+  }
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:16px;
+  }
+  header h1{
+    font-size:19px; font-weight:700; margin:0; letter-spacing:-0.01em;
+  }
+  header .sub{
+    font-size:12px; color:var(--text-faint);
+  }
+  .picker-row{
+    display:flex; gap:8px; margin-bottom:18px;
+  }
+  .picker{
+    flex:1; position:relative;
+  }
+  .picker select{
+    width:100%; appearance:none; -webkit-appearance:none;
+    background:var(--bg-raised); color:var(--text);
+    border:1px solid var(--line); border-radius:var(--radius);
+    padding:13px 34px 13px 14px;
+    font-size:16px; font-weight:600;
+    font-family:inherit;
+  }
+  .picker::after{
+    content:"⌄"; position:absolute; right:14px; top:50%; transform:translateY(-60%);
+    color:var(--text-faint); font-size:16px; pointer-events:none;
+  }
+  .week-banner{
+    display:flex; align-items:center; gap:10px;
+    padding:11px 14px; border-radius:var(--radius);
+    background:var(--bg-raised); border:1px solid var(--line);
+    margin-bottom:18px; font-size:13px; color:var(--text-dim);
+  }
+  .week-banner.deload{
+    background:rgba(201,122,61,0.12); border-color:var(--deload-dim); color:#E3A16E;
+  }
+  .week-banner .dot{
+    width:7px; height:7px; border-radius:50%; background:var(--accent); flex-shrink:0;
+  }
+  .week-banner.deload .dot{ background:var(--deload); }
+
+  .day-title{
+    font-size:22px; font-weight:700; margin:22px 0 12px; letter-spacing:-0.01em;
+  }
+  .day-title:first-of-type{ margin-top:0; }
+
+  .exercise{
+    background:var(--bg-raised); border:1px solid var(--line);
+    border-radius:var(--radius); margin-bottom:10px; overflow:hidden;
+  }
+  .exercise-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 14px; cursor:pointer;
+  }
+  .exercise-name{
+    font-size:16px; font-weight:600; margin:0;
+  }
+  .exercise-meta{
+    font-size:12.5px; color:var(--text-dim); margin-top:3px;
+  }
+  .exercise-meta .pct{ color:var(--accent); font-weight:600; }
+  .deload .exercise-meta .pct{ color:var(--deload); }
+
+  .dots{ display:flex; gap:5px; align-items:center; }
+  .set-dot{
+    width:9px; height:9px; border-radius:50%;
+    border:1.5px solid var(--text-faint); background:transparent;
+  }
+  .set-dot.filled{ background:var(--done); border-color:var(--done); }
+
+  .chevron{
+    color:var(--text-faint); font-size:14px; margin-left:10px;
+    transition:transform 0.2s ease;
+  }
+  .exercise.open .chevron{ transform:rotate(180deg); }
+
+  .exercise-body{
+    display:none; padding:0 14px 14px;
+  }
+  .exercise.open .exercise-body{ display:block; }
+
+  .notes{
+    font-size:12.5px; color:var(--text-dim); margin:0 0 10px; line-height:1.4;
+  }
+
+  .set-row{
+    display:grid; grid-template-columns:28px 1fr 1fr 64px;
+    gap:8px; align-items:center; margin-bottom:8px;
+  }
+  .set-num{
+    font-size:13px; color:var(--text-faint); font-weight:600; text-align:center;
+  }
+  .set-row input{
+    width:100%; background:var(--bg-input); border:1px solid var(--line);
+    border-radius:10px; color:var(--text); font-size:16px; font-weight:600;
+    padding:10px 8px; text-align:center; font-family:inherit;
+  }
+  .set-row input::placeholder{ color:var(--text-faint); font-weight:400; }
+  .set-row input:focus{ outline:none; border-color:var(--accent); }
+  .field-label{
+    font-size:9.5px; color:var(--text-faint); text-transform:uppercase;
+    letter-spacing:0.04em; text-align:center; margin-bottom:3px; display:block;
+  }
+  .col-head{
+    display:grid; grid-template-columns:28px 1fr 1fr 64px;
+    gap:8px; margin-bottom:4px;
+  }
+
+  .rpe-select{
+    width:100%; background:var(--bg-input); border:1px solid var(--line);
+    border-radius:10px; color:var(--text); font-size:15px; font-weight:600;
+    padding:10px 4px; text-align:center; font-family:inherit; appearance:none; -webkit-appearance:none;
+  }
+  .rpe-select:focus{ outline:none; border-color:var(--accent); }
+
+  .reset-link{
+    display:block; text-align:center; margin-top:28px;
+    font-size:12.5px; color:var(--text-faint); text-decoration:underline;
+    padding:10px;
+  }
+  .save-flash{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--done); color:#0F1A10; font-weight:700; font-size:13px;
+    padding:9px 18px; border-radius:100px; opacity:0; pointer-events:none;
+    transition:opacity 0.25s ease, transform 0.25s ease;
+    z-index:50;
+  }
+  .save-flash.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <h1>Block 1 Tracker</h1>
+      <div class="sub">Brett Goodman</div>
+    </div>
+    <div class="sub" id="dateNow"></div>
+  </header>
+
+  <div class="picker-row">
+    <div class="picker">
+      <select id="weekSelect"></select>
+    </div>
+    <div class="picker">
+      <select id="daySelect"></select>
+    </div>
+  </div>
+
+  <div id="weekBanner" class="week-banner">
+    <div class="dot"></div>
+    <div id="weekBannerText"></div>
+  </div>
+
+  <div id="dayContent"></div>
+
+  <a class="reset-link" id="resetBtn">Clear all logged data on this phone</a>
+</div>
+
+<div class="save-flash" id="saveFlash">Saved</div>
+
+<script>
+// ---------- Program data ----------
+const wave = {
+  1:{pct:"70%",label:"Wave 1 — base",deload:false},
+  2:{pct:"75%",label:"Wave 1 — build",deload:false},
+  3:{pct:"80-82%",label:"Wave 1 — peak",deload:false},
+  4:{pct:"60%",label:"Deload",deload:true},
+  5:{pct:"73%",label:"Wave 2 — base",deload:false},
+  6:{pct:"78%",label:"Wave 2 — build",deload:false},
+  7:{pct:"83-85%",label:"Wave 2 — peak",deload:false},
+  8:{pct:"60%",label:"Deload",deload:true},
+  9:{pct:"76%",label:"Wave 3 — base",deload:false},
+  10:{pct:"81%",label:"Wave 3 — build",deload:false},
+  11:{pct:"86-88%",label:"Wave 3 — peak, near-max effort",deload:false},
+  12:{pct:"50-60%",label:"Deload — then RETEST 5RM for Block 2",deload:true},
+};
+function waveNum(wk){ return wk<=4?1:wk<=8?2:3; }
+
+const variants = {
+  1:{bench:"Bench Press, Paused",squat:"Squat (straight bar)",deadlift:"Deadlift, conventional"},
+  2:{bench:"Close-Grip Bench Press (2-board)",squat:"SSB Squat",deadlift:"Deficit Deadlift (1-2 in)"},
+  3:{bench:"Bench Press, Paused",squat:"Squat (straight bar)",deadlift:"Deadlift, conventional"},
+};
+
+const accessorySets = {
+  1:{
+    1:[["Incline DB Press","moderate","3","10-12"],["Chest-Supported DB Row","moderate","3","10-12"],["Lat Pulldown","moderate","3","12-15"],["Triceps Pushdown","light-mod","3","12-15"],["Face Pull","light","3","15"]],
+    2:[["Leg Press","moderate","3","12-15"],["Leg Curl","moderate","3","12-15"],["GHR / Back Extension","BW/light","3","10-12"],["Standing Calf Raise","moderate","3","15-20"],["Ab Rollout","BW","3","10-12"]],
+    3:[["Barbell Row or Seal Row","moderate","3","10-12"],["Lat Pulldown, neutral","moderate","3","12-15"],["Suitcase Carry","moderate","3","40ft/side"],["Hanging Knee Raise","BW","3","10-12"]],
+    4:[["DB Bench Press","moderate","3","10-12"],["Cable Fly","light","3","12-15"],["Seated Row","moderate","3","12-15"],["Lateral Raise","light","3","15"],["Hammer Curl","light-mod","3","12-15"],["OH Triceps Ext.","light","3","12-15"]],
+  },
+  2:{
+    1:[["Flat DB Press","moderate","3","10-12"],["Pendlay Row","moderate","3","10-12"],["Pull-Ups / Assisted","BW","3","10-15"],["JM Press","light-mod","3","10-12"],["Band Pull-Apart","light","3","15"]],
+    2:[["Front Foot Elev. Split Squat","moderate","3","10-15"],["Seated Leg Curl","moderate","3","10-15"],["Reverse Hyper / Back Ext.","BW/light","3","10-15"],["Seated Calf Raise","moderate","3","10-15"],["Hanging Leg Raise","BW","3","10-15"]],
+    3:[["Meadows or 1-Arm DB Row","moderate","3","10-15"],["Straight-Arm Pulldown","moderate","3","10-15"],["Farmer's Carry","moderate","3","40ft/side"],["Weighted Plank","BW+","3","10-15"]],
+    4:[["Machine/Smith Incline Press","moderate","3","12-15"],["Pec Deck","light","3","12-15"],["Chest-Supp. Row Machine","moderate","3","12-15"],["Cable Lateral Raise","light","3","12-15"],["Incline DB Curl","light-mod","3","12-15"],["Rope Pushdown","light","3","12-15"]],
+  },
+  3:{
+    1:[["Incline DB Press","moderate","3","10-12"],["Chest-Supported DB Row","moderate","3","10-12"],["Lat Pulldown","moderate","3","12-15"],["Triceps Pushdown","light-mod","3","12-15"],["Face Pull","light","3","15"]],
+    2:[["Leg Press","moderate","3","12-15"],["Leg Curl","moderate","3","12-15"],["GHR / Back Extension","BW/light","3","10-12"],["Standing Calf Raise","moderate","3","15-20"],["Ab Rollout","BW","3","10-12"]],
+    3:[["Barbell Row or Seal Row","moderate","3","10-12"],["Lat Pulldown, neutral","moderate","3","12-15"],["Suitcase Carry","moderate","3","40ft/side"],["Hanging Knee Raise","BW","3","10-12"]],
+    4:[["DB Bench Press","moderate","3","10-12"],["Cable Fly","light","3","12-15"],["Seated Row","moderate","3","12-15"],["Lateral Raise","light","3","15"],["Hammer Curl","light-mod","3","12-15"],["OH Triceps Ext.","light","3","12-15"]],
+  },
+};
+
+const dayNames = {1:"Day 1 — Bench Focus", 2:"Day 2 — Squat Focus", 3:"Day 3 — Deadlift Rebuild + Pull", 4:"Day 4 — Upper Hypertrophy"};
+
+function mainLiftForDay(dayNum, wk){
+  const wn = waveNum(wk);
+  const v = variants[wn];
+  const w = wave[wk];
+  const sets = w.deload ? 3 : (wk%4===3 || wk===11 ? 3 : 4);
+  const name = dayNum===1?v.bench:dayNum===2?v.squat:dayNum===3?v.deadlift:null;
+  if(!name) return null;
+  return {name, pct:w.pct, sets, reps:5, isMain:true};
+}
+
+function accessoriesForDay(dayNum, wk){
+  const wn = waveNum(wk);
+  const w = wave[wk];
+  const list = accessorySets[wn][dayNum];
+  return list.map(([name,load,sets,reps])=>({
+    name, load, sets: w.deload ? Math.max(2, parseInt(sets)-1) : parseInt(sets), reps, isMain:false
+  }));
+}
+
+function exercisesForDayWeek(dayNum, wk){
+  const main = mainLiftForDay(dayNum, wk);
+  const acc = accessoriesForDay(dayNum, wk);
+  return main ? [main, ...acc] : acc;
+}
+
+// ---------- Storage ----------
+const STORAGE_PREFIX = "b1_";
+function keyFor(wk,day,exIdx){ return `${STORAGE_PREFIX}w${wk}_d${day}_e${exIdx}`; }
+
+async function loadSets(wk,day,exIdx,numSets){
+  try{
+    const raw = localStorage.getItem(keyFor(wk,day,exIdx));
+    if(raw){
+      return JSON.parse(raw);
+    }
+  }catch(e){}
+  return Array.from({length:numSets},()=>({w:"",r:"",rpe:""}));
+}
+
+async function saveSets(wk,day,exIdx,data){
+  try{
+    localStorage.setItem(keyFor(wk,day,exIdx), JSON.stringify(data));
+    flashSaved();
+  }catch(e){ console.error("save failed", e); }
+}
+
+let flashTimer;
+function flashSaved(){
+  const el = document.getElementById('saveFlash');
+  el.classList.add('show');
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(()=>el.classList.remove('show'), 900);
+}
+
+// ---------- UI ----------
+const weekSelect = document.getElementById('weekSelect');
+const daySelect = document.getElementById('daySelect');
+const dayContent = document.getElementById('dayContent');
+const weekBanner = document.getElementById('weekBanner');
+const weekBannerText = document.getElementById('weekBannerText');
+
+for(let w=1;w<=12;w++){
+  const opt = document.createElement('option');
+  opt.value = w;
+  opt.textContent = `Week ${w}` + (wave[w].deload ? " (Deload)" : "");
+  weekSelect.appendChild(opt);
+}
+for(let d=1;d<=4;d++){
+  const opt = document.createElement('option');
+  opt.value = d;
+  opt.textContent = dayNames[d];
+  daySelect.appendChild(opt);
+}
+
+function getState(){
+  const wk = parseInt(localStorage.getItem('b1_cur_week') || "1");
+  const day = parseInt(localStorage.getItem('b1_cur_day') || "1");
+  return {wk,day};
+}
+function setState(wk,day){
+  localStorage.setItem('b1_cur_week', wk);
+  localStorage.setItem('b1_cur_day', day);
+}
+
+async function render(){
+  const {wk, day} = getState();
+  weekSelect.value = wk;
+  daySelect.value = day;
+
+  const w = wave[wk];
+  weekBanner.classList.toggle('deload', w.deload);
+  weekBannerText.textContent = `${w.label} · Main lift target: ${w.pct} of 5RM for 5s`;
+
+  const exercises = exercisesForDayWeek(day, wk);
+  dayContent.innerHTML = "";
+
+  const title = document.createElement('div');
+  title.className = 'day-title';
+  title.textContent = dayNames[day];
+  dayContent.appendChild(title);
+
+  for(let i=0;i<exercises.length;i++){
+    const ex = exercises[i];
+    const card = document.createElement('div');
+    card.className = 'exercise' + (w.deload ? ' deload' : '');
+
+    const head = document.createElement('div');
+    head.className = 'exercise-head';
+    const nameWrap = document.createElement('div');
+    const nm = document.createElement('p');
+    nm.className = 'exercise-name';
+    nm.textContent = ex.name;
+    const meta = document.createElement('div');
+    meta.className = 'exercise-meta';
+    if(ex.isMain){
+      meta.innerHTML = `${ex.sets} x ${ex.reps} · <span class="pct">${ex.pct} of 5RM</span>`;
+    } else {
+      meta.textContent = `${ex.sets} x ${ex.reps} · ${ex.load}`;
+    }
+    nameWrap.appendChild(nm);
+    nameWrap.appendChild(meta);
+
+    const dotsWrap = document.createElement('div');
+    dotsWrap.style.display = 'flex';
+    dotsWrap.style.alignItems = 'center';
+    const dots = document.createElement('div');
+    dots.className = 'dots';
+    for(let s=0;s<ex.sets;s++){
+      const d = document.createElement('div');
+      d.className = 'set-dot';
+      d.dataset.setIdx = s;
+      dots.appendChild(d);
+    }
+    const chev = document.createElement('div');
+    chev.className = 'chevron';
+    chev.textContent = '⌄';
+    dotsWrap.appendChild(dots);
+    dotsWrap.appendChild(chev);
+
+    head.appendChild(nameWrap);
+    head.appendChild(dotsWrap);
+
+    const body = document.createElement('div');
+    body.className = 'exercise-body';
+
+    const colHead = document.createElement('div');
+    colHead.className = 'col-head';
+    colHead.innerHTML = `<span></span><span class="field-label">Weight</span><span class="field-label">Reps</span><span class="field-label">RPE</span>`;
+    body.appendChild(colHead);
+
+    const setsWrap = document.createElement('div');
+    body.appendChild(setsWrap);
+
+    card.appendChild(head);
+    card.appendChild(body);
+    dayContent.appendChild(card);
+
+    head.addEventListener('click', ()=> card.classList.toggle('open'));
+
+    // load and render sets
+    loadSets(wk,day,i,ex.sets).then(data=>{
+      setsWrap.innerHTML = "";
+      for(let s=0;s<ex.sets;s++){
+        const row = document.createElement('div');
+        row.className = 'set-row';
+        const num = document.createElement('div');
+        num.className = 'set-num';
+        num.textContent = s+1;
+
+        const wInput = document.createElement('input');
+        wInput.type = 'text'; wInput.inputMode = 'decimal';
+        wInput.placeholder = 'lb';
+        wInput.value = data[s]?.w || "";
+
+        const rInput = document.createElement('input');
+        rInput.type = 'text'; rInput.inputMode = 'numeric';
+        rInput.placeholder = ex.reps.toString();
+        rInput.value = data[s]?.r || "";
+
+        const rpeSelect = document.createElement('select');
+        rpeSelect.className = 'rpe-select';
+        const blank = document.createElement('option');
+        blank.value = ""; blank.textContent = "-";
+        rpeSelect.appendChild(blank);
+        for(let v=5;v<=10;v+=0.5){
+          const o = document.createElement('option');
+          o.value = v; o.textContent = v;
+          rpeSelect.appendChild(o);
+        }
+        rpeSelect.value = data[s]?.rpe || "";
+
+        function commit(){
+          data[s] = {w:wInput.value, r:rInput.value, rpe:rpeSelect.value};
+          saveSets(wk,day,i,data);
+          updateDots();
+        }
+        wInput.addEventListener('change', commit);
+        rInput.addEventListener('change', commit);
+        rpeSelect.addEventListener('change', commit);
+
+        row.appendChild(num);
+        row.appendChild(wInput);
+        row.appendChild(rInput);
+        row.appendChild(rpeSelect);
+        setsWrap.appendChild(row);
+      }
+      updateDots();
+
+      function updateDots(){
+        const dotEls = dots.querySelectorAll('.set-dot');
+        dotEls.forEach((d,idx)=>{
+          const filled = data[idx] && data[idx].w && data[idx].r;
+          d.classList.toggle('filled', !!filled);
+        });
+      }
+    });
+  }
+}
+
+weekSelect.addEventListener('change', ()=>{ setState(parseInt(weekSelect.value), parseInt(daySelect.value)); render(); });
+daySelect.addEventListener('change', ()=>{ setState(parseInt(weekSelect.value), parseInt(daySelect.value)); render(); });
+
+document.getElementById('resetBtn').addEventListener('click', async ()=>{
+  if(!confirm('Clear all logged sets on this phone? This cannot be undone.')) return;
+  try{
+    const toRemove = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith(STORAGE_PREFIX)) toRemove.push(k);
+    }
+    toRemove.forEach(k=>localStorage.removeItem(k));
+    render();
+    flashSaved();
+  }catch(e){ console.error(e); }
+});
+
+document.getElementById('dateNow').textContent = new Date().toLocaleDateString(undefined,{month:'short',day:'numeric'});
+
+render();
+</script>
+</body>
+</html>
